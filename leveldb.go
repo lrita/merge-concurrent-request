@@ -9,7 +9,7 @@ import (
 
 type leveldbitem struct {
 	done atomic1.AtomicBool
-	cond *sync.Cond
+	cond sync.Cond
 	// add some return value at following fields
 }
 
@@ -24,7 +24,7 @@ var litempool = cache.Cache{New: func() interface{} { return new(leveldbitem) },
 func (m *leveldbtask) Do() {
 	item := litempool.Get().(*leveldbitem)
 	item.done.Set(false)
-	item.cond = sync.NewCond(&m.lock)
+	item.cond.L = &m.lock
 
 	m.lock.Lock()
 	m.list = append(m.list, item)
