@@ -2,9 +2,9 @@ package main
 
 import (
 	"sync"
-	"unsafe"
 
 	"github.com/lrita/atomic1"
+	"github.com/lrita/cache"
 )
 
 type Tasker interface {
@@ -16,6 +16,8 @@ type mqitem struct {
 	// add some return value at following fields
 }
 
+var itempool = cache.Cache{New: func() interface{} { return new(mqitem) }, Size: 128}
+
 type mqtask struct {
 	mqflag   atomic1.AtomicBool
 	mqlock   sync.Mutex
@@ -26,8 +28,8 @@ type mqtask struct {
 }
 
 func (m *mqtask) Do() {
-	var itemobj mqitem
-	item := (*mqitem)(noescape(unsafe.Pointer(&itemobj)))
+	item := itempool.Get().(*mqitem)
+	item.done.Set(false)
 
 	m.mqlock.Lock()
 	idx := m.mqidx & 1
@@ -67,17 +69,11 @@ func (m *mqtask) Do() {
 			break
 		}
 	}
+	itempool.Put(item)
 	// here can change to real work return value, e.g:
 	// `return item.xx`
 }
 
 func NewMQTask(x Tasker) *mqtask {
 	return &mqtask{x: x}
-}
-
-//go:nosplit
-func noescape(p unsafe.Pointer) unsafe.Pointer {
-	x := uintptr(p)
-	//lint:ignore SA4016 copy from runtime package, disable staticcheck blame.
-	return unsafe.Pointer(x ^ 0)
 }

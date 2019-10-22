@@ -2,9 +2,9 @@ package main
 
 import (
 	"sync"
-	"unsafe"
 
 	"github.com/lrita/atomic1"
+	"github.com/lrita/cache"
 )
 
 type leveldbitem struct {
@@ -19,9 +19,11 @@ type leveldbtask struct {
 	x    Tasker
 }
 
+var litempool = cache.Cache{New: func() interface{} { return new(leveldbitem) }, Size: 128}
+
 func (m *leveldbtask) Do() {
-	var itemobj leveldbitem
-	item := (*leveldbitem)(noescape(unsafe.Pointer(&itemobj)))
+	item := litempool.Get().(*leveldbitem)
+	item.done.Set(false)
 	item.cond = sync.NewCond(&m.lock)
 
 	m.lock.Lock()
@@ -33,6 +35,7 @@ func (m *leveldbtask) Do() {
 		// here can change to real work return value, e.g:
 		// `return item.xx`
 		m.lock.Unlock()
+		litempool.Put(item)
 		return
 	}
 
@@ -64,6 +67,7 @@ func (m *leveldbtask) Do() {
 	}
 
 	m.lock.Unlock()
+	litempool.Put(item)
 	// here can change to real work return value, e.g:
 	// `return item.xx`
 	return

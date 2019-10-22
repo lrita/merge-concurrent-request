@@ -25,6 +25,7 @@ func (t *fasttask) Do() {
 func BenchmarkMQList(b *testing.B) {
 	x := &fasttask{}
 	m := NewMQTask(x)
+	b.SetParallelism(5)
 	b.ReportAllocs()
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
@@ -41,6 +42,7 @@ func BenchmarkMQList(b *testing.B) {
 func BenchmarkLevelDB(b *testing.B) {
 	x := &fasttask{}
 	m := NewLevelDBTask(x)
+	b.SetParallelism(5)
 	b.ReportAllocs()
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
@@ -57,6 +59,7 @@ func BenchmarkLevelDB(b *testing.B) {
 func BenchmarkGoLevelDB(b *testing.B) {
 	x := &fasttask{}
 	m := NewGoLevelDBTask(x)
+	b.SetParallelism(5)
 	b.ReportAllocs()
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
